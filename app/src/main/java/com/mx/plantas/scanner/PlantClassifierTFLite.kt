@@ -24,7 +24,7 @@ class PlantClassifierTFLite {
     companion object {
         private const val TAG = "PlantClassifierHybrid"
         private const val INPUT_SIZE = 224
-        private const val CONFIDENCE_THRESHOLD = 0.35f
+        private const val CONFIDENCE_THRESHOLD = 0.20f
         private const val TOP_K_RESULTS = 5
     }
 
@@ -271,66 +271,106 @@ class PlantClassifierTFLite {
      * Calcula score de una planta basado en características
      */
     private fun calculatePlantScore(features: ImageFeatures, profile: PlantProfile): Float {
-        var score = 0f
+        var score = 0.1f  // Base mínima para todas las plantas
         
-        // Validación de características de color del perfil
-        val colorRangeMatch = if (features.dominantColors.isNotEmpty()) {
+        // 1. ANÁLISIS DE COLOR - Flexible
+        if (features.dominantColors.isNotEmpty()) {
             val primary = features.dominantColors[0]
-            val inRange = primary.r in profile.colorRange.rMin..profile.colorRange.rMax &&
-                         primary.g in profile.colorRange.gMin..profile.colorRange.gMax &&
-                         primary.b in profile.colorRange.bMin..profile.colorRange.bMax
-            if (inRange) 0.25f else 0f
-        } else {
-            0f
+            val colorMatch = calculateColorSimilarity(primary, profile.colorRange)
+            score += colorMatch * 0.3f  // Hasta +0.3
         }
-        score += colorRangeMatch
         
-        // Análisis por tipo de planta
+        // 2. ANÁLISIS POR TIPO DE PLANTA
         when {
-            // Flores (Rosa, Tulipán, Girasol)
+            // FLORES (Rosa, Tulipán, Girasol)
             profile.shapeCharacteristics.flowerLike -> {
-                if (features.redRatio > 0.1f || features.yellowRatio > 0.1f) {
-                    score += 0.3f
-                } else if (features.greenRatio > 0.6f) {
-                    score += 0.15f
-                } else {
-                    score -= 0.2f
+                // Las flores tienen rojo o amarillo visibles
+                when {
+                    features.redRatio > 0.12f -> score += 0.25f
+                    features.yellowRatio > 0.12f -> score += 0.25f
+                    features.redRatio > 0.08f || features.yellowRatio > 0.08f -> score += 0.15f
+                    features.greenRatio > 0.4f -> score += 0.05f  // Pequeño bonus si es verde (hojas)
                 }
             }
-            // Plantas trepadoras/enredaderas (Pothos)
-            profile.family == "Araceae" && profile.shapeCharacteristics.edginess < 0.5f -> {
-                if (features.greenRatio > 0.6f && features.edginess < 0.4f) {
-                    score += 0.25f
+            // PLANTAS VERDES - Pothos, Monstera, Ficus
+            profile.leafColor == "verde" && !profile.shapeCharacteristics.flowerLike -> {
+                when {
+                    // Pothos - suave
+                    profile.family == "Araceae" && profile.shapeCharacteristics.edginess < 0.5f -> {
+                        if (features.greenRatio > 0.5f && features.edginess < 0.35f) {
+                            score += 0.25f
+                        } else if (features.greenRatio > 0.4f) {
+                            score += 0.15f
+                        }
+                    }
+                    // Monstera - bordes pronunciados
+                    profile.family == "Araceae" && profile.shapeCharacteristics.edginess > 0.7f -> {
+                        if (features.greenRatio > 0.5f && features.edginess > 0.55f) {
+                            score += 0.25f
+                        } else if (features.greenRatio > 0.5f) {
+                            score += 0.15f
+                        }
+                    }
+                    // Ficus - general
+                    profile.family == "Moraceae" -> {
+                        if (features.greenRatio > 0.5f) {
+                            score += 0.20f
+                        }
+                    }
+                    // Otros: solo si es predominantemente verde
+                    else -> {
+                        if (features.greenRatio > 0.6f) score += 0.20f
+                        else if (features.greenRatio > 0.4f) score += 0.10f
+                    }
                 }
             }
-            // Plantas de hojas grandes (Monstera)
-            profile.family == "Araceae" && profile.shapeCharacteristics.edginess > 0.7f -> {
-                if (features.greenRatio > 0.5f && features.edginess > 0.6f) {
-                    score += 0.25f
-                }
-            }
-            // Cactus y suculentas
+            // CACTUS Y SUCULENTAS
             profile.family in listOf("Cactaceae", "Aloeaceae") -> {
                 if (features.edginess > 0.6f) {
-                    score += 0.3f
-                } else {
-                    score -= 0.1f
+                    score += 0.25f
+                } else if (features.edginess > 0.45f) {
+                    score += 0.15f
                 }
-            }
-            // Árboles (Ficus)
-            profile.family == "Moraceae" -> {
-                if (features.greenRatio > 0.5f && features.aspectRatio > 0.8f && features.aspectRatio < 1.5f) {
-                    score += 0.2f
-                }
+                // Bonus si también es verde
+                if (features.greenRatio > 0.3f) score += 0.05f
             }
         }
         
-        // Castigo por aspecto anómalo
-        if (features.aspectRatio > 2f || features.aspectRatio < 0.5f) {
-            score -= 0.15f
+        // 3. PENALIZACIÓN POR ASPECTO ANÓMALO
+        if (features.aspectRatio > 2.5f || features.aspectRatio < 0.4f) {
+            score -= 0.05f
         }
         
         return maxOf(0f, minOf(1f, score))
+    }
+    
+    /**
+     * Calcula similitud de color entre un pixel y un rango
+     * Retorna valor entre 0 y 1 (1 = coincidencia perfecta, 0 = no coincide)
+     */
+    private fun calculateColorSimilarity(color: ColorInfo, range: ColorRange): Float {
+        // Tolerancia de ±60 valores en cada canal
+        val tolerance = 60
+        
+        val rMatch = if (color.r in (range.rMin - tolerance)..(range.rMax + tolerance)) {
+            1f - (kotlin.math.abs(color.r - (range.rMin + range.rMax) / 2).toFloat() / (range.rMax - range.rMin + tolerance))
+        } else {
+            0f
+        }
+        
+        val gMatch = if (color.g in (range.gMin - tolerance)..(range.gMax + tolerance)) {
+            1f - (kotlin.math.abs(color.g - (range.gMin + range.gMax) / 2).toFloat() / (range.gMax - range.gMin + tolerance))
+        } else {
+            0f
+        }
+        
+        val bMatch = if (color.b in (range.bMin - tolerance)..(range.bMax + tolerance)) {
+            1f - (kotlin.math.abs(color.b - (range.bMin + range.bMax) / 2).toFloat() / (range.bMax - range.bMin + tolerance))
+        } else {
+            0f
+        }
+        
+        return (rMatch + gMatch + bMatch) / 3f
     }
 
     /**
@@ -377,7 +417,7 @@ class PlantClassifierTFLite {
         val gMin: Int, val gMax: Int,
         val bMin: Int, val bMax: Int
     )
-    
+
     data class ShapeChar(
         val flowerLike: Boolean,
         val petalCount: Float,
