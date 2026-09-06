@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/plantListFragment">
+
+    <fragment
+        android:id="@+id/plantListFragment"
+        android:name="com.mx.plantas.ui.PlantListFragment"
+        android:label="@string/app_name"
+        tools:layout="@layout/fragment_plant_list">
+        <action
+            android:id="@+id/action_plantListFragment_to_plantDetailFragment"
+            app:destination="@id/plantDetailFragment" />
+        <action
+            android:id="@+id/action_plantListFragment_to_addPlantFragment"
+            app:destination="@id/addPlantFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/plantDetailFragment"
+        android:name="com.mx.plantas.ui.PlantDetailFragment"
+        android:label="@string/plant_detail_title"
+        tools:layout="@layout/fragment_plant_detail">
+        <argument
+            android:name="plant_id"
+            android:defaultValue="0L"
+            app:argType="long" />
+        <action
+            android:id="@+id/action_plantDetailFragment_to_editPlantFragment"
+            app:destination="@id/editPlantFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/addPlantFragment"
+        android:name="com.mx.plantas.ui.AddPlantFragment"
+        android:label="Agregar Planta"
+        tools:layout="@layout/fragment_add_plant" />
+
+    <fragment
+        android:id="@+id/editPlantFragment"
+        android:name="com.mx.plantas.ui.EditPlantFragment"
+        android:label="Editar Planta"
+        tools:layout="@layout/fragment_add_plant">
+        <argument
+            android:name="plantId"
+            android:defaultValue="0L"
+            app:argType="long" />
+    </fragment>
+</navigation>

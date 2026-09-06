@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">Mi Jardín</string>
+    <string name="action_settings">Configuración</string>
+    <string name="plant_list_title">Plantas</string>
+    <string name="plant_list_subtitle">Descubre tus plantas favoritas</string>
+    <string name="search_hint">Buscar por nombre o familia</string>
+    <string name="no_results">No se encontraron resultados</string>
+    <string name="plant_detail_title">Detalle</string>
+    <string name="plant_details">Detalles</string>
+    <string name="care_level">Nivel de cuidado</string>
+    <string name="water_need">Riego</string>
+    <string name="sunlight">Luz</string>
+    <string name="difficulty">Dificultad</string>
+    <string name="description">Descripción</string>
+    <string name="plant_image">Imagen de la planta</string>
+    <string name="next">Siguiente</string>
+    <string name="previous">Anterior</string>
+    <string name="scan_plant">Escanear planta</string>
+    <string name="lorem_ipsum">Planta de ejemplo para la plantilla inicial.</string>
+</resources>

@@ -1,0 +1,11 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Base.Theme.AppPlantas" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/green_500</item>
+        <item name="colorPrimaryVariant">@color/green_700</item>
+        <item name="colorSecondary">@color/green_700</item>
+        <item name="android:statusBarColor">@color/green_700</item>
+        <item name="android:navigationBarColor">@color/green_900</item>
+    </style>
+
+    <style name="Theme.AppPlantas" parent="Base.Theme.AppPlantas" />
+</resources>
